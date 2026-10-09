@@ -376,32 +376,47 @@
     // Pega aquí la MISMA URL que usaste en index.html (termina en /exec)
     const API_URL = "https://script.google.com/macros/s/AKfycbwov6Xz1g7YzQmIE_y0ogkN7fhPNLjOc6NKZGW4ZdWcJ4N_ZinCBO9w6YcCOzL68SpzDg/exec";
 
-    async function enviarPedido(datos) {
+   async function enviarPedido(datos) {
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify({
+                action: "pedido",
+                ...datos
+            })
+        });
+
+        const texto = await response.text();
+        let resultado;
+
         try {
-            const response = await fetch(API_URL, {
-                method: "POST",
-                body: JSON.stringify({
-                    action: "pedido",
-                    ...datos
-                })
-            });
-
-            const resultado = await response.json();
-
-            if (resultado.success) {
-                alert("¡Pedido enviado correctamente!");
-                carrito = [];
-                localStorage.removeItem("carritoLegacy");
-                mostrarPedido();
-                document.getElementById("pedidoForm").reset();
+            resultado = JSON.parse(texto);
+        } catch (e) {
+            // Si Google redirige y no devuelve JSON limpio, pero el status es ok
+            if (response.ok) {
+                resultado = { success: true };
             } else {
-                alert("Error al guardar el pedido: " + (resultado.error || "Desconocido"));
+                throw new Error("Respuesta inválida del servidor");
             }
-        } catch (error) {
-            console.error(error);
-            alert("Error de conexión. Intenta de nuevo.");
         }
+
+        if (resultado.success) {
+            alert("¡Pedido enviado correctamente!");
+            carrito = [];
+            localStorage.removeItem("carritoLegacy");
+            mostrarPedido();
+            document.getElementById("pedidoForm").reset();
+        } else {
+            alert("Error al guardar el pedido: " + (resultado.error || "Desconocido"));
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión. Intenta de nuevo.");
     }
+}
 
     document.getElementById("pedidoForm").addEventListener("submit", function(event) {
         event.preventDefault();
